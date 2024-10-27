@@ -27,7 +27,7 @@ class WaveGeneratorByISTFT(nn.Module):
 
         self.float_to_complex = ComplexTensorLayer()
 
-    @torch.amp.custom_fwd(cast_inputs=torch.float32, device_types='cuda')
+    @torch.amp.custom_fwd(cast_inputs=torch.float32, device_type='cuda')
     def forward(self,input,length:int=None):
         x = input
         if input.dtype in (torch.float16, torch.bfloat16):

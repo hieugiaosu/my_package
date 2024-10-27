@@ -38,7 +38,7 @@ class STFTInput(nn.Module):
         elif self.spec_transform_type == STFT_transform_type_enum.log:
             self.spec_transform = lambda spec: torch.log(1 + spec.abs()) * torch.exp(1j * spec.angle()) * self.spec_factor
         
-    @torch.amp.custom_fwd(cast_inputs=torch.float32,device_types='cuda')
+    @torch.amp.custom_fwd(cast_inputs=torch.float32,device_type='cuda')
     def forward(self,input):
         """
         Notice that, in pytorch, the STFT does not support quantize 16 bit float, so this function
