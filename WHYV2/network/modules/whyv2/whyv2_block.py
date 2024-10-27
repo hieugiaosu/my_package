@@ -23,13 +23,13 @@ class CausalIntraAndInterBandModule(nn.Module):
         self.intra_norm = nn.LayerNorm(emb_dim,eps=eps)
 
         self.intra_lstm = nn.LSTM(
-            in_channels,hidden_channels,1,batch_first=True,bidirectional=False
+            in_channels,hidden_channels,1,batch_first=True,bidirectional=True
         )
 
         if kernel_size == emb_hop_size:
-            self.intra_linear = nn.Linear(hidden_channels, in_channels)
+            self.intra_linear = nn.Linear(hidden_channels*2, in_channels)
         else:
-            self.intra_linear = nn.ConvTranspose1d(hidden_channels, emb_dim,kernel_size ,emb_hop_size)
+            self.intra_linear = nn.ConvTranspose1d(hidden_channels*2, emb_dim,kernel_size ,emb_hop_size)
 
         self.inter_norm = nn.LayerNorm(emb_dim, eps=eps)
         self.inter_lstm = nn.LSTM(
