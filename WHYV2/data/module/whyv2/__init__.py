@@ -1,3 +1,3 @@
-from .whyv2_train import WHYV2TrainDataset
+from .whyv2_train import WHYV2TrainDataset, WHYV2ValidateDataset
 
-__all__ = ['WHYV2TrainDataset']
+__all__ = ['WHYV2TrainDataset', "WHYV2ValidateDataset"]
