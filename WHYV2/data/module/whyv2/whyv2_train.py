@@ -51,8 +51,8 @@ class WHYV2TrainDataset(Dataset):
             mix = torchaudio.functional.add_noise(second_audio,audio,snr_rate)
         if self.augmentation is not None:
             mix = self.augmentation(mix)
-        mix = rearrange(mix,'(b l) -> b l',b=self.small_chunk)
-        audio = rearrange(audio,'(b l) -> b l',b=self.small_chunk)
+        mix = rearrange(mix,'(b l) -> b l',l=self.small_chunk)
+        audio = rearrange(audio,'(b l) -> b l',l=self.small_chunk)
         return {"mix":mix,"ground_truth":audio,"emb0":e, 'ref':ref}
 
 class WHYV2ValidateDataset(Dataset):
@@ -94,6 +94,6 @@ class WHYV2ValidateDataset(Dataset):
             mix = torchaudio.functional.add_noise(second_audio,audio,snr_rate)
         if self.augmentation is not None:
             mix = self.augmentation(mix)
-        mix = rearrange(mix,'(b l) -> b l',b=self.small_chunk)
-        audio = rearrange(audio,'(b l) -> b l',b=self.small_chunk)
+        mix = rearrange(mix,'(b l) -> b l',l=self.small_chunk)
+        audio = rearrange(audio,'(b l) -> b l',l=self.small_chunk)
         return {"mix":mix,"ground_truth":audio,"emb0":e,"ref":ref_audio}
