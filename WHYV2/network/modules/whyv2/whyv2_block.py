@@ -5,6 +5,7 @@ from einops import rearrange
 import math
 from ..whyv import AllHeadPReLULayerNormalization4DC, LayerNormalization, WHYVFilterGate
 from .schema import *
+from dataclasses import asdict
 class CausalIntraAndInterBandModule(nn.Module):
     def __init__(
             self, emb_dim:int = 48,
@@ -164,11 +165,7 @@ class SelectionFrameAttention(nn.Module):
         ##############
         out = att + input
         out = rearrange(out, "B C T Q -> B C Q T")
-
-        return SelectionAttentionRefOutput(
-            output=out, 
-            selection_frame=out[..., -self.n_selection_frame:]
-            )
+        return {"output":out, "selection_frame":out[..., -self.n_selection_frame:]}
 
     
     def forward(self,x,selection_frame):
@@ -243,13 +240,17 @@ class WHYV2block(nn.Module):
     def register_reference(self, reference_frame, gtf, gtb):
         y, h = self.intra_and_inter_band_module(reference_frame, return_hidden=True)
         att_ref_output = self.selection_frame_attention.register_reference(y)
-        output = self.filter_gate(att_ref_output.output, gtf, gtb)
-
-        return Whyv2BlockRefOutput(
-            output = output,
-            selection_frame = att_ref_output.selection_frame,
-            lstm_hidden = h
-        )
+        output = self.filter_gate(att_ref_output['output'], gtf, gtb)
+        return {
+            "output":output,
+            "selection_frame":att_ref_output["selection_frame"],
+            "lstm_hidden":h
+        }
+        # return asdict(Whyv2BlockRefOutput(
+        #     output = output,
+        #     selection_frame = att_ref_output.selection_frame,
+        #     lstm_hidden = h
+        # ))
         
 
     def forward(self,input:Whyv2BlockForwardInput):

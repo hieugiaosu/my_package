@@ -5,7 +5,7 @@ from ...modules.output import RMSDenormalizeOutput, WaveGeneratorByISTFT
 from ...modules.whyv2 import *
 from ...modules.whyv import DimensionEmbedding, WHYVDeconv
 from .schema import Whyv2Reference
-
+from dataclasses import asdict
 class WHYV2(nn.Module):
     def __init__(
             self,
@@ -107,16 +107,16 @@ class WHYV2(nn.Module):
         gtf = rearrange(gtf,"b (d q) -> b d q 1", q = n_freqs)
         gtb = rearrange(gtb,"b (d q) -> b d q 1", q = n_freqs)
 
-        ref_out_put = Whyv2Reference(
-            gtf=gtf,
-            gtb=gtb,
-            whyv2_block_ref=[]
-        )
+        ref_out_put = {
+            "gtf":gtf,
+            "gtb":gtb,
+            "whyv2_block_ref":[]
+        }
         i = x
         for block in self.whyv2_block:
             o = block.register_reference(i,gtf,gtb)
-            ref_out_put.whyv2_block_ref.append(o)
-            i = o.output
+            ref_out_put["whyv2_block_ref"].append(o)
+            i = o['output']
         
         return ref_out_put
     
@@ -135,10 +135,10 @@ class WHYV2(nn.Module):
             x = block(
                 Whyv2BlockForwardInput(
                     x=x,
-                    gtf=whyv2_reference.gtf,
-                    gtb=whyv2_reference.gtb,
-                    lstm_hidden=whyv2_reference.whyv2_block_ref[idx].lstm_hidden,
-                    selection_frame=whyv2_reference.whyv2_block_ref[idx].selection_frame
+                    gtf=whyv2_reference["gtf"],
+                    gtb=whyv2_reference["gtb"],
+                    lstm_hidden=whyv2_reference["whyv2_block_ref"][idx]["lstm_hidden"],
+                    selection_frame=whyv2_reference["whyv2_block_ref"][idx]["selection_frame"]
                 )
             )
         
