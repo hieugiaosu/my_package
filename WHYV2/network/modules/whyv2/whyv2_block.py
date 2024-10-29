@@ -4,8 +4,7 @@ import torch.nn.functional as F
 from einops import rearrange
 import math
 from ..whyv import AllHeadPReLULayerNormalization4DC, LayerNormalization, WHYVFilterGate
-from .schema import *
-from dataclasses import asdict
+
 class CausalIntraAndInterBandModule(nn.Module):
     def __init__(
             self, emb_dim:int = 48,
@@ -137,7 +136,7 @@ class SelectionFrameAttention(nn.Module):
         self.n_head = n_head
         self.n_selection_frame = n_selection_frame
     
-    def register_reference(self, reference_frame) -> SelectionAttentionRefOutput:
+    def register_reference(self, reference_frame):
         """
         Args:
             reference_frame (torch.Tensor): [B C Q T]
@@ -246,15 +245,10 @@ class WHYV2block(nn.Module):
             "selection_frame":att_ref_output["selection_frame"],
             "lstm_hidden":h
         }
-        # return asdict(Whyv2BlockRefOutput(
-        #     output = output,
-        #     selection_frame = att_ref_output.selection_frame,
-        #     lstm_hidden = h
-        # ))
         
 
-    def forward(self,input:Whyv2BlockForwardInput):
-        y = self.intra_and_inter_band_module(input.x, input.lstm_hidden, return_hidden=False)
-        y = self.selection_frame_attention(y, input.selection_frame)
-        y = self.filter_gate(y, input.gtf, input.gtb)
+    def forward(self,input):
+        y = self.intra_and_inter_band_module(input['x'], input['lstm_hidden'], return_hidden=False)
+        y = self.selection_frame_attention(y, input['selection_frame'])
+        y = self.filter_gate(y, input['gtf'], input['gtb'])
         return y

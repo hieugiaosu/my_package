@@ -4,8 +4,6 @@ from ...modules.input import RMSNormalizeInput, STFTInput
 from ...modules.output import RMSDenormalizeOutput, WaveGeneratorByISTFT
 from ...modules.whyv2 import *
 from ...modules.whyv import DimensionEmbedding, WHYVDeconv
-from .schema import Whyv2Reference
-from dataclasses import asdict
 class WHYV2(nn.Module):
     def __init__(
             self,
@@ -120,7 +118,7 @@ class WHYV2(nn.Module):
         
         return ref_out_put
     
-    def forward(self, input, whyv2_reference: Whyv2Reference):
+    def forward(self, input, whyv2_reference):
         audio_length = input.shape[-1]
         x = input
         if x.dim() == 2:
@@ -133,13 +131,13 @@ class WHYV2(nn.Module):
 
         for idx, block in enumerate(self.whyv2_block):
             x = block(
-                Whyv2BlockForwardInput(
-                    x=x,
-                    gtf=whyv2_reference["gtf"],
-                    gtb=whyv2_reference["gtb"],
-                    lstm_hidden=whyv2_reference["whyv2_block_ref"][idx]["lstm_hidden"],
-                    selection_frame=whyv2_reference["whyv2_block_ref"][idx]["selection_frame"]
-                )
+                {
+                    "x":x,
+                    "gtf":whyv2_reference["gtf"],
+                    "gtb":whyv2_reference["gtb"],
+                    "lstm_hidden":whyv2_reference["whyv2_block_ref"][idx]["lstm_hidden"],
+                    "selection_frame":whyv2_reference["whyv2_block_ref"][idx]["selection_frame"]
+                }
             )
         
         x = self.deconv(x)
