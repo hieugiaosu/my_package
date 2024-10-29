@@ -53,7 +53,7 @@ class WHYV2TrainDataset(Dataset):
             mix = self.augmentation(mix)
         mix = rearrange(mix,'(b l) -> b l',l=self.small_chunk)
         audio = rearrange(audio,'(b l) -> b l',l=self.small_chunk)
-        return {"mix":mix,"ground_truth":audio,"emb0":e, 'ref':ref}
+        return {"mix":mix,"ground_truth":audio,"emb0":torch.stack([e]*mix.shape[0]),"ref":torch.stack([ref]*mix.shape[0])}
 
 class WHYV2ValidateDataset(Dataset):
     def __init__(self,clusters:List[Cluster], embedding_model,augmentation = None,num_speaker_per_cluster:int=6, sampling_rate = 8000, small_chunk = 0.5) -> None:
@@ -96,4 +96,4 @@ class WHYV2ValidateDataset(Dataset):
             mix = self.augmentation(mix)
         mix = rearrange(mix,'(b l) -> b l',l=self.small_chunk)
         audio = rearrange(audio,'(b l) -> b l',l=self.small_chunk)
-        return {"mix":mix,"ground_truth":audio,"emb0":e,"ref":ref_audio}
+        return {"mix":mix,"ground_truth":audio,"emb0":torch.stack([e]*mix.shape[0]),"ref":torch.stack([ref_audio]*mix.shape[0])}
