@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Tuple, Optional
+from typing import Tuple, Optional, TypedDict
 import torch
 
 @dataclass
@@ -21,9 +21,13 @@ class Whyv2BlockForwardInput:
     gtb: torch.Tensor
     gtf: torch.Tensor
 
+class CausalWHYV2BlockHidden(TypedDict):
+    lstm_hidden: Tuple[torch.Tensor, torch.Tensor]
+    attention_hidden: Tuple[torch.Tensor, torch.Tensor]
 
 __all__ = [
     "SelectionAttentionRefOutput",
     "Whyv2BlockRefOutput",
-    "Whyv2BlockForwardInput"
+    "Whyv2BlockForwardInput",
+    "CausalWHYV2BlockHidden"
 ]
