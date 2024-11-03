@@ -50,7 +50,7 @@ class CausalFrameLinearAttention(nn.Module):
         batch, n_head, channel, frame, freq = V.shape
         V = rearrange(V, "B H C T Q -> (B H) T (C Q)")
 
-        att, new_h = self.attention(Q, K, V, h, n_chunks=4)
+        att, new_h = self.attention(Q, K, V, h, n_chunks=16)
         att = rearrange(att, "(B H) T (C Q) -> B (H C) T Q", C=channel, Q=freq, H = n_head, B = batch, T=frame)
         att = self.concat_proj(att)
         out = att + input
