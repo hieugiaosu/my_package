@@ -22,7 +22,8 @@ class CausalLinearAttention(nn.Module):
             q:torch.Tensor,
             k:torch.Tensor,
             v:torch.Tensor,
-            h:Optional[Tuple[torch.Tensor,torch.Tensor]]=None
+            h:Optional[Tuple[torch.Tensor,torch.Tensor]]=None,
+            n_chunks:int = 1
             ):
         """
         Args:
@@ -41,7 +42,7 @@ class CausalLinearAttention(nn.Module):
             s_init = torch.zeros(batch,1,dim,dim_value,dtype=q.dtype, device=q.device)
         query = self.phi(q) + 1
         key = self.phi(k) + 1
-        return causal_linear_attention(query,key,v,s_init,z_init,self.eps)
+        return causal_linear_attention(query,key,v,s_init,z_init,self.eps,n_chunks)
         # z = torch.cumsum(key, dim=1) + z_init
         # s = torch.cumsum(torch.einsum('btfi,btgi->btfg',key.unsqueeze(-1),v.unsqueeze(-1)), dim=1) + s_init
 
