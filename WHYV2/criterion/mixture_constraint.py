@@ -13,6 +13,6 @@ class Mixture_constraint_loss(nn.Module):
 
     def forward(self,input,label):
         N = input.shape[0]
-        alpha = torch.bmm(input.unsqueeze(1),label.unsqueeze(-1))/torch.clamp(torch.bmm(input.unsqueeze(1),input.unsqueeze(-1)),min=1e-7)
+        alpha = torch.bmm(input.unsqueeze(1),label.unsqueeze(-1))/torch.clamp(torch.bmm(input.unsqueeze(1),input.unsqueeze(-1)),min=torch.tensor(1e-7,dtype=input.dtype))
         alpha = alpha.view(N,1)
         return self.loss_reduction(torch.norm(alpha*input-label,1,dim=-1))

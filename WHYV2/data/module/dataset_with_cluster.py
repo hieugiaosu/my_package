@@ -38,7 +38,7 @@ class TrainDatasetWithCluster(Dataset):
 
         audio, ref = cluster.read_file(speaker,chunk_idx,True)
         e = self.embedding_model(ref)
-
+        ref = torchaudio.functional.resample(ref,16000,self.sampling_rate)
         audio = torchaudio.functional.resample(audio,16000,self.sampling_rate)
 
         second_audio = self.clusters[np.random.randint(0,len(self.clusters))].get_mix_for_speaker(int(speaker),False)
@@ -54,7 +54,7 @@ class TrainDatasetWithCluster(Dataset):
             mix_16k = torchaudio.functional.resample(mix,8000,16000)
             e_mix = self.embedding_model(mix_16k)
             e = torch.cat([e,e_mix],dim=0)
-        return {"mix":mix,"src0":audio,"emb0":e}
+        return {"mix":mix,"src0":audio,"emb0":e, "ref":ref.squeeze()}
     
 class ValDatasetWithCluster(Dataset):
     def __init__(self,clusters:List[Cluster], embedding_model,augmentation = None,num_speaker_per_cluster:int=6, sampling_rate = 8000, emb_mix = False) -> None:
@@ -84,7 +84,7 @@ class ValDatasetWithCluster(Dataset):
         audio, speaker_id = cluster.get_val_item(idx)
         ref_audio = cluster.get_val_item_by_speaker(speaker_id,0)
         e = self.embedding_model(ref_audio)
-
+        ref_audio = torchaudio.functional.resample(ref_audio,16000,self.sampling_rate)
         audio = torchaudio.functional.resample(audio,16000,self.sampling_rate)
         second_audio = self.clusters[np.random.randint(0,len(self.clusters))].get_mix_for_speaker(int(speaker_id),True)
         second_audio = torchaudio.functional.resample(second_audio,16000,self.sampling_rate)
@@ -99,7 +99,7 @@ class ValDatasetWithCluster(Dataset):
             mix_16k = torchaudio.functional.resample(mix,8000,16000)
             e_mix = self.embedding_model(mix_16k)
             e = torch.cat([e,e_mix],dim=0)
-        return {"mix":mix,"src0":audio,"emb0":e}
+        return {"mix":mix,"src0":audio,"emb0":e, "ref":ref_audio.squeeze()}
 
 class TrainDataLoaderWithCluster(DataLoader):
     def __iter__(self):
@@ -113,3 +113,60 @@ class TrainDataLoaderWithCluster(DataLoader):
             self.dataset.reset()
             self._iterator = super().__iter__()
             raise StopIteration
+        
+class TrainDatasetWithClusterAndHiddenPresent(Dataset):
+    def __init__(self,clusters:List[Cluster], embedding_model,augmentation = None,num_speaker_per_cluster:int=6, sampling_rate = 8000, log = True, emb_mix = False, n_layers = 5) -> None:
+        super().__init__()
+
+        self.n_layers = n_layers
+        self.clusters = clusters
+        self.log = log
+        self.cluster_size = [0]*(len(self.clusters)+1)
+        self.num_speaker_per_cluster = num_speaker_per_cluster
+        self.reset()
+        self.embedding_model = embedding_model
+        self.sampling_rate = sampling_rate
+        self.augmentation = augmentation
+        self.emb_mix = emb_mix        
+
+    def reset(self):
+        for i in range(len(self.clusters)):
+            self.clusters[i].reset(self.num_speaker_per_cluster,self.log)
+            self.cluster_size[i+1] = len(self.clusters[i]) + self.cluster_size[i]
+
+    def __len__(self): return self.cluster_size[-1]
+
+    def __getitem__(self,idx):
+        cluster = self.clusters[0]
+        for i,lim in enumerate(self.cluster_size):
+            if idx < lim:
+                cluster = self.clusters[i - 1]
+                idx -= self.cluster_size[i - 1]
+                break
+
+        speaker, chunk_idx = cluster[idx]
+
+        audio, ref = cluster.read_file(speaker,chunk_idx,True)
+        e = self.embedding_model(ref)
+        ref = torchaudio.functional.resample(ref,16000,self.sampling_rate)
+        audio = torchaudio.functional.resample(audio,16000,self.sampling_rate)
+
+        second_audio = self.clusters[np.random.randint(0,len(self.clusters))].get_mix_for_speaker(int(speaker),False)
+        second_audio = torchaudio.functional.resample(second_audio,16000,self.sampling_rate)
+        snr = 0
+        mix_list = []
+        for i in range(self.n_layers+1):
+            snr_rate = torch.tensor(snr,dtype=torch.float32)
+            mix_list.append(torchaudio.functional.add_noise(audio,second_audio,snr_rate))
+            snr += 4
+        
+
+        # snr_rate = torch.randint(0,5,(1,))[0]
+        mix = mix_list[0]
+        if self.augmentation is not None:
+            mix = self.augmentation(mix)
+        if self.emb_mix:
+            mix_16k = torchaudio.functional.resample(mix,8000,16000)
+            e_mix = self.embedding_model(mix_16k)
+            e = torch.cat([e,e_mix],dim=0)
+        return {"mix":mix,"src0":audio,"emb0":e, "ref":ref.squeeze(), "hidden_present":mix_list[1:]}

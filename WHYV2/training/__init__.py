@@ -1,2 +1,5 @@
 from .FilterBandTFGridnetPipeline import FilterBandTFPipeline, FilterBandTFPipelineWithWham, WHYV2PipelineWithWham
 from .DistillPipeline import *
+from .WHYV2WithGLAPipeline import WHYV2GLAPipelineWithWham
+from .WHYV3Pipeline import WHYV3Pipeline
+from .WHYVWithHiddenPresentPipeline import WHYVWithHiddenPresentPipeline

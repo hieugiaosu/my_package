@@ -2,6 +2,7 @@ from abc import ABC
 import torch.optim as optim
 import torch
 from torch.utils.data import DataLoader
+import gc
 
 class TrainingPipeline(ABC):
     def __init__(
@@ -33,6 +34,8 @@ class TrainingPipeline(ABC):
         self.model = model
         if use_checkpoint:
             self.model.load_state_dict(torch.load(use_checkpoint,map_location='cpu'))
+            torch.cuda.empty_cache()
+            gc.collect()
         self.device = device
         self.using_multi_gpu = using_multi_gpu
         if device is None:

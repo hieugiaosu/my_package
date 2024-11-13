@@ -1,10 +1,10 @@
 import torch
-from torch.amp import custom_fwd, custom_bwd
+# from torch.amp import custom_fwd, custom_bwd
 import math
 
 class CausalLinearAttentionFunction(torch.autograd.Function):
     @staticmethod
-    @custom_fwd(device_type='cuda', cast_inputs=torch.float32)
+    # @custom_fwd(device_type='cuda', cast_inputs=torch.float32)
     def forward(query,key,value,s_init,z_init,eps = 1e-6, n_chunks=1):
         num_frames = query.shape[1]
         chunk_size = num_frames // n_chunks
@@ -38,14 +38,14 @@ class CausalLinearAttentionFunction(torch.autograd.Function):
         # ))
 
     @staticmethod
-    @custom_fwd(device_type='cuda', cast_inputs=torch.float32)
+    # @custom_fwd(device_type='cuda', cast_inputs=torch.float32)
     def setup_context(ctx, inputs, output):
         query,key,value,s_init,z_init,eps, n_chunks = inputs
         chunk_size = query.shape[1] // n_chunks
         ctx.save_for_backward(query,key,value,s_init, torch.tensor(chunk_size,device='cpu'))
     
     @staticmethod
-    @custom_bwd(device_type='cuda')
+    # @custom_bwd(device_type='cuda')
     def backward(ctx, grad_output, *args):
         """
         ctx: (query,key,value,s_init)
