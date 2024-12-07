@@ -1,8 +1,9 @@
-import torch.nn as nn
+import math
+
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange
-import math
 
 if hasattr(torch, "bfloat16"):
     HALF_PRECISION_DTYPES = (torch.float16, torch.bfloat16)
@@ -88,7 +89,7 @@ class IntraAndInterBandModule(nn.Module):
         if self.kernel_size == self.emb_hs:
             inter_rnn = inter_rnn.view([B * Q, -1, self.kernel_size * C])
             inter_rnn, _ = self.inter_lstm(inter_rnn)
-            inter_rnn = self.inter_linear(intra_rnn)
+            inter_rnn = self.inter_linear(inter_rnn)
             inter_rnn = inter_rnn.view([B, Q, T, C])
         else:
             inter_rnn = rearrange(inter_rnn,"B Q T C -> (B Q) C T")

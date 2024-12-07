@@ -1,7 +1,10 @@
+from typing import Optional
+
 import torch
 import torch.nn as nn
-from ...layers import InverseSTFTLayer, ComplexTensorLayer
-from typing import Optional
+
+from ...layers import ComplexTensorLayer, InverseSTFTLayer
+
 
 class WaveGeneratorByISTFT(nn.Module):
     def __init__(
@@ -27,7 +30,7 @@ class WaveGeneratorByISTFT(nn.Module):
 
         self.float_to_complex = ComplexTensorLayer()
 
-    # @torch.amp.custom_fwd(cast_inputs=torch.float32, device_type='cuda')
+    @torch.amp.custom_fwd(cast_inputs=torch.float32, device_type='cuda')
     def forward(self,input,length:int=None):
         x = input
         if input.dtype in (torch.float16, torch.bfloat16):

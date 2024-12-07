@@ -1,5 +1,8 @@
+import itertools
+
 import torch
 from torch.nn.modules.loss import _Loss
+
 
 class SingleSrcNegSDRScaledSrc(_Loss):
     r"""Base class for single-source negative SI-SDR, SD-SDR and SNR.
@@ -123,3 +126,48 @@ class SISDRLoss(_Loss):
     
     def forward(self, est_target, target):
         return self.loss(est_target, target)
+
+class SISDRLossWithPIT(_Loss):
+    def __init__(self, zero_mean=True, scale_source = False, take_log=True, reduction="none", EPS=1e-8, n_src=2):
+        assert reduction != "sum", NotImplementedError
+        super().__init__(reduction=reduction)
+        self.n_src = n_src
+        if scale_source:
+            self.loss = SingleSrcNegSDRScaledSrc(zero_mean, take_log, reduction, EPS)
+        else:
+            self.loss = SingleSrcNegSDRScaledEst(zero_mean, take_log, reduction, EPS)
+    
+    def forward(self, est_sources, src_sources):
+        """
+        Compute SI-SDR with PIT.
+        Args:
+            est_sources (torch.Tensor): Estimated sources. Shape: (batch, n_src, time)
+            src_sources (torch.Tensor): Reference sources. Shape: (batch, n_src, time)
+        """
+        batch_size, n_src, time = est_sources.size()
+        assert n_src == self.n_src, "Number of estimated sources must match the configured n_src."
+        assert src_sources.size() == est_sources.size(), "Shape mismatch between estimated and reference sources."
+
+        # Generate all possible permutations
+        permutations = list(itertools.permutations(range(n_src)))
+        loss_matrix = torch.zeros(batch_size, len(permutations), device=est_sources.device)
+
+        # Compute loss for each permutation
+        for perm_idx, perm in enumerate(permutations):
+            permuted_src = src_sources[:, perm, :]  # Permute the sources
+            loss_per_perm = torch.stack(
+                [self.loss(est_sources[:, i, :], permuted_src[:, i, :]) for i in range(n_src)],
+                dim=-1,
+            )  # (batch, n_src)
+            loss_matrix[:, perm_idx] = loss_per_perm.sum(dim=-1)
+
+        # Select the permutation with the minimum loss
+        min_loss, _ = loss_matrix.min(dim=-1)  # (batch,)
+
+        # Apply reduction
+        if self.reduction == "mean":
+            return min_loss.mean()
+        elif self.reduction == "none":
+            return min_loss
+        else:
+            raise ValueError(f"Invalid reduction mode: {self.reduction}")

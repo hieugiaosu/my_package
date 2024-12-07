@@ -2,7 +2,7 @@ from torch.nn.modules import Module
 from .utils import TrainingPipeline
 # from criterion import SingleSrcNegSDRScaledEst,Mixture_constraint_loss
 from ..criterion import SingleSrcNegSDRScaledEst,Mixture_constraint_loss
-from torch.cuda.amp import GradScaler, autocast
+from torch.amp import GradScaler, autocast
 import torch
 import time
 import gc
@@ -40,7 +40,7 @@ class FilterBandTFPipeline(TrainingPipeline):
         print("This pipeline is train in mixed precision")
         self.si_sdr_fn = SingleSrcNegSDRScaledEst(reduction="mean")
         self.mixture_constraint_fn = Mixture_constraint_loss()
-        self.scaler = GradScaler()
+        self.scaler = GradScaler('cuda')
         self.warm_up = warm_up
 
     def train_iter(self,epoch,start_time):
@@ -55,11 +55,11 @@ class FilterBandTFPipeline(TrainingPipeline):
 
         for data in self.train_loader:
             self.optimizer.zero_grad()
-            mix = data['mix'].to(self.device)
-            src0 = data['src0'].to(self.device)
-            emb0 = data['emb0'].to(self.device)
+            mix = data['mix'].to(self.device).float()
+            src0 = data['src0'].to(self.device).float()
+            emb0 = data['emb0'].to(self.device).float()
             num_batch += 1
-            with autocast():  # Use autocast for mixed precision
+            with autocast(device_type='cuda'):  # Use autocast for mixed precision
                 if epoch <= self.warm_up:
                     yHat = self.model(mix,emb0)
                     loss = self.si_sdr_fn(yHat,src0)
@@ -99,11 +99,11 @@ class FilterBandTFPipeline(TrainingPipeline):
         tot_loss, num_batch = 0, 0
         with torch.no_grad():
             for data in self.val_loader:
-                mix = data['mix'].to(self.device)
-                src0 = data['src0'].to(self.device)
-                emb0 = data['emb0'].to(self.device)
+                mix = data['mix'].to(self.device).float()
+                src0 = data['src0'].to(self.device).float()
+                emb0 = data['emb0'].to(self.device).float()
                 num_batch += 1
-                with autocast():  # Use autocast for mixed precision
+                with autocast(device_type='cuda'):  # Use autocast for mixed precision
                     yHat = self.model(mix, emb0)
                     loss = self.si_sdr_fn(yHat, src0)
                 tot_loss += loss.cpu().detach().item()
@@ -174,7 +174,7 @@ class FilterBandTFPipelineWithWham(TrainingPipeline):
         print("This pipeline is train in mixed precision")
         self.si_sdr_fn = SingleSrcNegSDRScaledEst(reduction="mean")
         self.mixture_constraint_fn = Mixture_constraint_loss()
-        self.scaler = GradScaler()
+        self.scaler = GradScaler('cuda')
         self.warm_up = warm_up
         self.wham_train = wham_train
         self.wham_val = wham_val
@@ -198,14 +198,14 @@ class FilterBandTFPipelineWithWham(TrainingPipeline):
                 mix = self.wham_train.add_noise_batch(mix)
             mix = mix.to(self.device)
             num_batch += 1
-            with autocast():  # Use autocast for mixed precision
+            with autocast(device_type='cuda'):  # Use autocast for mixed precision
                 if epoch <= self.warm_up:
                     yHat = self.model(mix,emb0)
                     loss = self.si_sdr_fn(yHat,src0)
                 else:
                     yHat = self.model(mix, emb0)
                     si_sdr = self.si_sdr_fn(yHat, src0)
-                    mix_constraint = self.mixture_constraint_fn(yHat, src0)
+                    mix_constraint = self.mixture_constraint_fn(yHat.squeeze(), src0.squeeze())
                     loss = si_sdr + mix_constraint
             self.scaler.scale(loss).backward()
             self.scaler.unscale_(self.optimizer)
@@ -245,7 +245,7 @@ class FilterBandTFPipelineWithWham(TrainingPipeline):
                     mix = self.wham_val.add_noise_batch(mix)
                 mix = mix.to(self.device)
                 num_batch += 1
-                with autocast():  # Use autocast for mixed precision
+                with autocast(device_type='cuda'):  # Use autocast for mixed precision
                     yHat = self.model(mix, emb0)
                     loss = self.si_sdr_fn(yHat, src0)
                 tot_loss += loss.cpu().detach().item()
@@ -315,7 +315,7 @@ class WHYV2PipelineWithWham(TrainingPipeline):
         print("This pipeline is train in mixed precision")
         self.si_sdr_fn = SingleSrcNegSDRScaledEst(reduction="mean")
         self.mixture_constraint_fn = Mixture_constraint_loss()
-        self.scaler = GradScaler()
+        self.scaler = GradScaler('cuda')
         self.warm_up = warm_up
         self.wham_train = wham_train
         self.wham_val = wham_val
@@ -339,7 +339,7 @@ class WHYV2PipelineWithWham(TrainingPipeline):
                 mix = self.wham_train.add_noise_batch(mix)
             mix = mix.to(self.device)
             num_batch += 1
-            with autocast():  # Use autocast for mixed precision
+            with autocast(device_type='cuda'):  # Use autocast for mixed precision
                 if epoch <= self.warm_up:
                     yHat = self.model(mix,emb0)
                     loss = self.si_sdr_fn(yHat,src0)
@@ -386,7 +386,7 @@ class WHYV2PipelineWithWham(TrainingPipeline):
                     mix = self.wham_val.add_noise_batch(mix)
                 mix = mix.to(self.device)
                 num_batch += 1
-                with autocast():  # Use autocast for mixed precision
+                with autocast(device_type='cuda'):  # Use autocast for mixed precision
                     yHat = self.model(mix, emb0)
                     loss = self.si_sdr_fn(yHat, src0)
                 tot_loss += loss.cpu().detach().item()
